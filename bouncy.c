@@ -3,19 +3,27 @@
 
 int main()
 {
-    Display * dpy;
+    Display * display;
     Window root;
-    Window * children;
-    unsigned int nchildren;
+    Window parent;
+    Window * windows;
+    unsigned int nwindows;
     XWindowAttributes attr;
 
-    if(!(dpy = XOpenDisplay(0x0))) return 1;
+    if(!(display = XOpenDisplay(0x0))) return 1;
 
-    root = DefaultRootWindow(dpy);
+    root = DefaultRootWindow(display);
 
-    for(;;)
-    {
-        XQueryTree(dpy, root, NULL, NULL, &children, &nchildren);
-        usleep(167000);
+    for(;;) {
+        XQueryTree(display, root, &root, &parent, &windows, &nwindows);
+        for (int i = 0; i < nwindows; i++) {
+            XGetWindowAttributes(display, windows[i], &attr);
+
+            int x = attr.x + 1;
+            int y = attr.y + 1;
+            XMoveWindow(display, windows[i], x, y);
+        }
+
+        usleep(16700);
     }
 }
