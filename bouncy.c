@@ -37,10 +37,10 @@ int main()
         for (int i = 0; i < nwindows; i++) {
             XGetWindowAttributes(display, windows[i], &attr);
 
-            if (attr.x + attr.width >= screenWidth) {
+            if (attr.x < 0 || attr.x + attr.width >= screenWidth) {
                 directions[i].x *= -1;
             }
-            if (attr.y + attr.height >= screenHeight) {
+            if (attr.y < 0 || attr.y + attr.height >= screenHeight) {
                 directions[i].y *= -1;
             }
 
