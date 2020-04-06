@@ -47,6 +47,6 @@ int main()
             XMoveWindow(display, windows[i], attr.x + directions[i].x, attr.y + directions[i].y);
         }
 
-        usleep(16700);
+        usleep(16667);
     }
 }
