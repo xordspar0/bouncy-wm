@@ -2,6 +2,11 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+struct direction {
+    int x;
+    int y;
+};
+
 int main()
 {
     Display * display;
@@ -16,28 +21,30 @@ int main()
 
     root = DefaultRootWindow(display);
 
-    for(;;) {
-        XGetWindowAttributes(display, root, &attr);
-        screenWidth = attr.width;
-        screenHeight = attr.height;
+    XGetWindowAttributes(display, root, &attr);
+    screenWidth = attr.width;
+    screenHeight = attr.height;
 
-        XQueryTree(display, root, &root, &parent, &windows, &nwindows);
+    XQueryTree(display, root, &root, &parent, &windows, &nwindows);
+
+    struct direction directions[nwindows];
+    for (int i = 0; i < nwindows; i++) {
+        directions[i].x = 1;
+        directions[i].y = 1;
+    }
+
+    for(;;) {
         for (int i = 0; i < nwindows; i++) {
             XGetWindowAttributes(display, windows[i], &attr);
 
-            int x, y;
-            if (attr.x + attr.width < screenWidth) {
-                x = attr.x + 1;
-            } else {
-                x = attr.x - 1;
+            if (attr.x + attr.width >= screenWidth) {
+                directions[i].x *= -1;
             }
-            if (attr.y + attr.height < screenHeight) {
-                y = attr.y + 1;
-            } else {
-                y = attr.y - 1;
+            if (attr.y + attr.height >= screenHeight) {
+                directions[i].y *= -1;
             }
 
-            XMoveWindow(display, windows[i], x, y);
+            XMoveWindow(display, windows[i], attr.x + directions[i].x, attr.y + directions[i].y);
         }
 
         usleep(16700);
