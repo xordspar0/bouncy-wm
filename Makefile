@@ -4,8 +4,9 @@ LDFLAGS = $(shell pkg-config --cflags --libs x11)
 .PHONY: all
 all: bouncy
 
-bouncy: bouncy.c
-	cc $(CFLAGS) $^ $(LDFLAGS) -o $@
+.PHONY:
+bouncy:
+	go build
 
 .PHONY: run
 run: bouncy
@@ -13,8 +14,8 @@ run: bouncy
 	sleep 0.1
 	xterm -display :2 &
 	sleep 0.1
-	env DISPLAY=:2 ./bouncy
+	env DISPLAY=:2 ./bouncy-wm
 
 .PHONY: clean
 clean:
-	rm -f bouncy
+	rm -f bouncy-wm
