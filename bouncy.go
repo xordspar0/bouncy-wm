@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/xgb"
@@ -22,6 +24,45 @@ func main() {
 	screen := xproto.Setup(X).DefaultScreen(X)
 	root := screen.Root
 
+	xproto.ChangeWindowAttributes(X, root, xproto.CwEventMask, []uint32{xproto.EventMaskSubstructureNotify})
+
+	var windowsMutex sync.Mutex
+	windows := make(map[xproto.Window]*direction)
+
+	go func() {
+		for {
+			ev, err := X.WaitForEvent()
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			if ev == nil {
+				log.Println("X connection closed by server")
+				os.Exit(1)
+			}
+
+			switch ev.(type) {
+			case xproto.CreateNotifyEvent:
+				log.Println(ev)
+				results, err := xproto.QueryTree(X, root).Reply()
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				newWindows := results.Children
+
+				for _, window := range newWindows {
+					if _, exists := windows[window]; !exists {
+						windowsMutex.Lock()
+						windows[window] = &direction{x: 1, y: 1}
+						windowsMutex.Unlock()
+					}
+				}
+			}
+		}
+	}()
+
 	geometry, err := xproto.GetGeometry(X, xproto.Drawable(root)).Reply()
 	screenWidth := geometry.Width
 	screenHeight := geometry.Height
@@ -31,29 +72,30 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	windows := results.Children
-	directions := make([]direction, len(windows))
-	for i := range directions {
-		directions[i].x = 1
-		directions[i].y = 1
+	for _, window := range results.Children {
+		windows[window] = &direction{x:1, y: 1}
 	}
 
 	for {
-		for i, window := range windows {
+		for window, direction := range windows {
 			geometry, err := xproto.GetGeometry(X, xproto.Drawable(window)).Reply()
 			if err != nil {
 				log.Println(err)
 			}
 
 			if geometry.X < 0 || geometry.X+int16(geometry.Width) >= int16(screenWidth) {
-				directions[i].x *= -1
+				windowsMutex.Lock()
+				direction.x *= -1
+				windowsMutex.Unlock()
 			}
 			if geometry.Y < 0 || geometry.Y+int16(geometry.Height) >= int16(screenHeight) {
-				directions[i].y *= -1
+				windowsMutex.Lock()
+				direction.y *= -1
+				windowsMutex.Unlock()
 			}
 
-			newX := uint32(geometry.X + directions[i].x)
-			newY := uint32(geometry.Y + directions[i].y)
+			newX := uint32(geometry.X + direction.x)
+			newY := uint32(geometry.Y + direction.y)
 
 			xproto.ConfigureWindow(X, window, xproto.ConfigWindowX|xproto.ConfigWindowY, []uint32{newX, newY})
 		}
