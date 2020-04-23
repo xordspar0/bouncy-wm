@@ -42,23 +42,17 @@ func main() {
 				os.Exit(1)
 			}
 
-			switch ev.(type) {
+			switch ev := ev.(type) {
 			case xproto.CreateNotifyEvent:
 				log.Println(ev)
-				results, err := xproto.QueryTree(X, root).Reply()
-				if err != nil {
-					log.Fatalln(err)
-				}
-
-				newWindows := results.Children
-
-				for _, window := range newWindows {
-					if _, exists := windows[window]; !exists {
-						windowsMutex.Lock()
-						windows[window] = &direction{x: 1, y: 1}
-						windowsMutex.Unlock()
-					}
-				}
+				windowsMutex.Lock()
+				windows[ev.Window] = &direction{x: 1, y: 1}
+				windowsMutex.Unlock()
+			case xproto.DestroyNotifyEvent:
+				log.Println(ev)
+				windowsMutex.Lock()
+				delete(windows, ev.Window)
+				windowsMutex.Unlock()
 			}
 		}
 	}()
